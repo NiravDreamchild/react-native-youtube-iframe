@@ -54,7 +54,20 @@
       } = JSON.parse(UrlQueryData);
 
       function sendMessageToRN(msg) {
-        window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+
+        if (window.ReactNativeWebView) {
+          // React Native WebView
+          window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+        } else if (window.parent) {
+          // This is from expo web iframe.
+          //
+          // We set cross origin to so that this will work on differnet origin.
+          // We don't expect any sensitive data to be sent.
+          window.parent.postMessage(JSON.stringify(msg), '*');
+        } else {
+          console.error('Not running in Iframe, cannot postMessage.');
+          return;
+        }
       }
 
       let metaString = '';
@@ -147,6 +160,8 @@
       document.addEventListener('mozfullscreenchange', onFullScreenChange);
       document.addEventListener('webkitfullscreenchange', onFullScreenChange);
 
+      // NOTE: the 3rd parameter is needed for Android Webview.
+      // https://github.com/react-native-webview/react-native-webview/issues/356
       window.addEventListener('message', function (event) {
         const {data} = event;
 
@@ -182,7 +197,7 @@
         } catch (error) {
           console.error('Error parsing data', event, error);
         }
-      });
+      }, true);
     </script>
   </body>
 </html>
